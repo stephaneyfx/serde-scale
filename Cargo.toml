@@ -1,0 +1,24 @@
+[package]
+name = "serde-scale"
+version = "0.1.0"
+authors = ["Stephane Raux <stephaneyfx@gmail.com>"]
+edition = "2018"
+description = "Serde serializer and deserializer for the SCALE encoding"
+license = "Zlib"
+homepage = "https://github.com/stephaneyfx/serde-scale"
+repository = "https://github.com/stephaneyfx/serde-scale.git"
+readme = "README.md"
+keywords = ["serde", "scale", "serialization", "substrate"]
+
+[features]
+alloc = ["serde/alloc"]
+default = ["std"]
+std = ["alloc", "serde/std"]
+
+[dependencies.serde]
+version = "1.0.116"
+default-features = false
+features = ["derive"]
+
+[workspace]
+members = ["serde-scale-tests"]

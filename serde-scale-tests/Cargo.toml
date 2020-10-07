@@ -1,0 +1,15 @@
+[package]
+name = "serde-scale-tests"
+version = "0.1.0"
+authors = ["Stephane Raux <stephaneyfx@gmail.com>"]
+edition = "2018"
+description = "Tests for serde-scale"
+license = "Zlib"
+homepage = "https://github.com/stephaneyfx/serde-scale"
+repository = "https://github.com/stephaneyfx/serde-scale.git"
+keywords = ["serde", "scale", "serialization", "substrate"]
+
+[dev-dependencies]
+parity-scale-codec = { version = "1.3.5", features = ["derive"] }
+serde = { version = "1.0.116", features = ["derive"] }
+serde-scale = { version = "0.1.0", path = ".." }
