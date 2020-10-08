@@ -414,8 +414,7 @@ impl Display for VoidError {
     }
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for VoidError {}
+impl serde::ser::StdError for VoidError {}
 
 impl serde::ser::Error for VoidError {
     fn custom<T: Display>(_: T) -> Self {
