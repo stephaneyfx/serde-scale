@@ -1,7 +1,7 @@
 // Copyright (C) 2020 Stephane Raux. Distributed under the zlib license.
 
 #[cfg(feature = "alloc")]
-use alloc::string::{String, ToString};
+use alloc::string::ToString;
 use core::fmt::{self, Debug, Display};
 
 /// Serialization errors
@@ -42,10 +42,7 @@ pub enum Error<E> {
     /// I/O error from the underlying reader or writer
     Io(E),
     /// Other error the serializer or deserializer might encounter
-    #[cfg(feature = "alloc")]
-    Other(String),
-    #[cfg(not(feature = "alloc"))]
-    Other(&'static str),
+    Other(OtherError),
 }
 
 impl<E> From<E> for Error<E> {
@@ -99,11 +96,17 @@ impl<E: Display> Display for Error<E> {
 }
 
 #[cfg(feature = "std")]
-impl<E: std::error::Error + 'static> std::error::Error for Error<E> {
+impl<E: Debug + Display> std::error::Error for Error<E> {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::InvalidUnicode(e) => Some(e),
-            Error::Io(e) => Some(e),
+            Error::Io(_) => {
+                // Ideally the bound would be `E: std::error::Error + 'static` and the inner error
+                // could be returned but doing so leads to a world of sadness when a dependency tree
+                // turns on `serde/std` without turning on the `std` feature of crates defining
+                // error types.
+                None
+            }
             Error::FloatingPointUnsupported
             | Error::TooManyVariants { .. }
             | Error::LengthNeeded
@@ -118,37 +121,77 @@ impl<E: std::error::Error + 'static> std::error::Error for Error<E> {
     }
 }
 
-impl<E: SuperError + 'static> serde::ser::Error for Error<E> {
+#[cfg(not(feature = "std"))]
+impl<E: Debug + Display> serde::ser::StdError for Error<E> {}
+
+impl<E: Debug + Display> serde::ser::Error for Error<E> {
     fn custom<T: Display>(msg: T) -> Self {
         #[cfg(feature = "alloc")]
         {
-            Error::Other(msg.to_string())
+            Error::Other(msg.to_string().into())
         }
         #[cfg(not(feature = "alloc"))]
         {
             let _ = msg;
-            Error::Other("Custom error")
+            Error::Other("Custom error".into())
         }
     }
 }
 
-impl<E: SuperError + 'static> serde::de::Error for Error<E> {
+impl<E: Debug + Display> serde::de::Error for Error<E> {
     fn custom<T: Display>(msg: T) -> Self {
         serde::ser::Error::custom(msg)
     }
 }
 
-pub use super_error::SuperError;
+pub use other_error::OtherError;
 
-#[cfg(feature = "std")]
-mod super_error {
-    pub use std::error::Error as SuperError;
+#[cfg(feature = "alloc")]
+mod other_error {
+    use alloc::string::String;
+
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct OtherError(String);
+
+    impl OtherError {
+        pub fn as_str(&self) -> &str {
+            &self.0
+        }
+    }
+
+    impl From<String> for OtherError {
+        fn from(s: String) -> Self {
+            Self(s)
+        }
+    }
+
+    impl From<&str> for OtherError {
+        fn from(s: &str) -> Self {
+            Self(s.into())
+        }
+    }
 }
 
-#[cfg(not(feature = "std"))]
-mod super_error {
-    use core::fmt::{Debug, Display};
+#[cfg(not(feature = "alloc"))]
+mod other_error {
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub struct OtherError(&'static str);
 
-    pub trait SuperError: Debug + Display {}
-    impl<E: Debug + Display + ?Sized> SuperError for E {}
+    impl OtherError {
+        pub fn as_str(&self) -> &str {
+            self.0
+        }
+    }
+
+    impl From<&'static str> for OtherError {
+        fn from(s: &'static str) -> Self {
+            Self(s)
+        }
+    }
+}
+
+impl Display for OtherError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
 }

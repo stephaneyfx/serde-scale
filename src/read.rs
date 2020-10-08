@@ -4,11 +4,10 @@ use core::{
     fmt::{self, Debug, Display},
     ops::Deref,
 };
-use crate::SuperError;
 
 /// Interface to read bytes
 pub trait Read<'a> {
-    type Error: SuperError + 'static;
+    type Error: Debug + Display;
 
     /// Reads exactly `n` bytes and passes them to the given function
     ///

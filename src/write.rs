@@ -2,11 +2,11 @@
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use crate::SuperError;
+use core::fmt::{Debug, Display};
 
 /// Interface to write bytes
 pub trait Write {
-    type Error: SuperError + 'static;
+    type Error: Debug + Display;
 
     /// Writes bytes
     fn write(&mut self, data: &[u8]) -> Result<(), Self::Error>;
